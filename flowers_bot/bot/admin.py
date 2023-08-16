@@ -1,10 +1,10 @@
 from django.contrib import admin
-from .models import Client
+from .models import Client, Event, Catalog, Consultation, Order
 
 # Register your models here.
 
-@admin.register(Client)
-class ClientAdmin(admin.ModelAdmin):
-    search_fields = ['first_name','last_name','phone','address']
-    list_filter = ['is_florist','is_courier']
-    list_display = ['first_name','last_name','phone']
+admin.site.register(Client)
+admin.site.register(Event)
+admin.site.register(Catalog)
+admin.site.register(Consultation)
+admin.site.register(Order)

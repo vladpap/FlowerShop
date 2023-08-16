@@ -32,20 +32,14 @@ class Client(models.Model):
     
     is_florist = models.BooleanField(
         'Флорист',
-        default=None,
-        null=True,
-        blank=True
-    )
+        default=False)
 
     is_courier = models.BooleanField(
         'Курьер',
-        default=None,
-        null=True,
-        blank=True
-    )
+        default=False)
     
     class Meta:
-        verbose_name='Пользователь'
+        verbose_name='Пользователя'
         verbose_name_plural='Пользователи'
 
 
@@ -66,3 +60,109 @@ class Client(models.Model):
             return None
 
 
+class Event(models.Model):
+    title = models.CharField(
+        'Событие',
+        max_length=25)
+    
+    class Meta:
+        verbose_name='Событие'
+        verbose_name_plural='События'
+       
+    def __str__(self):
+        return f'{self.title}'
+
+
+class Catalog(models.Model):
+    title = models.CharField(
+        'Букет',
+        max_length=25,
+        db_index=True)
+    
+    description = models.TextField('Описание')
+
+    photo = models.ImageField(
+        'Изображение',
+        upload_to='flowers_img')
+    
+    price = models.DecimalField(
+        'Цена',
+        max_digits=7,
+        decimal_places=2)
+    
+    event = models.ManyToManyField(Event)
+
+    class Meta:
+        verbose_name='Букет'
+        verbose_name_plural='Букеты' 
+
+
+    def __str__(self):
+        return f'{self.title},{self.price} р.'
+    
+
+class Consultation(models.Model):
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        null=False,
+        verbose_name='Клиент',
+        related_name='client_consultation_set')
+    
+    florist = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        null=False,
+        verbose_name='Флорист',
+        related_name='florist_consultation_set')
+    
+    class Meta:
+        verbose_name='Консультацию'
+        verbose_name_plural='Консультации'
+
+    def __str__(self):
+        return f'{self.client}, {self.florist}'
+    
+
+class Order(models.Model):
+    bouquet = models.ForeignKey(
+        Catalog,
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name='Букет',
+        related_name='orders',
+        blank=True)
+    
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        null=False,
+        verbose_name='Клиент',
+        related_name='client_order_set')
+    
+    delivery_date = models.DateField(verbose_name='Дата доставки')
+
+    CHOICE = (
+        ('AM', '11:00 - 15:00'),
+        ('PM', '15:00 - 20:00'),
+    )
+
+    delivery_time = models.CharField(
+        verbose_name='Время доставки',
+        max_length=20,
+        choices=CHOICE,
+        default='PM')
+    
+    courier = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        null=False,
+        verbose_name='Курьер',
+        related_name='courier_order_set')
+
+    class Meta:
+        verbose_name='Заказ'
+        verbose_name_plural='Заказы'
+
+    def __str__(self):
+        return f'{self.client}, {self.delivery_date} {self.delivery_time}{self.courier}'
