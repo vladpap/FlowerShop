@@ -1,18 +1,14 @@
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 import phonenumbers
+from django.contrib.auth.models import User
 
 
 class Client(models.Model):
-    first_name = models.CharField(
-        'Имя',
-        max_length=50,
-        db_index=True)
-    
-    last_name = models.CharField(
-        'Фамилия',
-        max_length=50,
-        db_index=True)
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Пользователь')
         
     telegram_id = models.CharField(
         'Telegram id',
@@ -30,13 +26,6 @@ class Client(models.Model):
         null=True,
         blank=True)
     
-    is_florist = models.BooleanField(
-        'Флорист',
-        default=False)
-
-    is_courier = models.BooleanField(
-        'Курьер',
-        default=False)
     
     class Meta:
         verbose_name='Пользователя'
@@ -44,14 +33,14 @@ class Client(models.Model):
 
 
     def __str__(self):
-        return f'{self.first_name} {self.last_name}{self.phone}{self.adress}'
+        return f'{self.user.first_name} {self.user.last_name}{self.phone}{self.adress}'
 
 
     def get_client(tg_id):
         client = Client.objects.filter(telegram_id=tg_id).first()
         if client:
             return {
-                'name': client.first_name,
+                'name': client.user.first_name,
                 'phone': phonenumbers.format_number(
                          client.phone,
                          phonenumbers.PhoneNumberFormat.E164),
@@ -80,6 +69,8 @@ class Catalog(models.Model):
         db_index=True)
     
     description = models.TextField('Описание')
+
+    composition = models.TextField('Состав букета',)
 
     photo = models.ImageField(
         'Изображение',
