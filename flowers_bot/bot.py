@@ -1,6 +1,7 @@
 import os
 
 import logging
+import datetime
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, update, KeyboardButton, ChatAction
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, ConversationHandler
 from environs import Env
@@ -50,8 +51,9 @@ catalog = [
 ]
 users_1 = {'id': 422100905, 'first_name': 'Слава', 'phone': +79199834767, 'address': 'улица Комсомольская, 9'}
 
-START, CHOOSE_EVENT, CHOOSE_AMOUNT, ORDER_FLOWERS, DISTRIBUTION, CONTACT_DETAILS = range(6)
-contact_details = {}
+START, CHOOSE_EVENT, CHOOSE_AMOUNT, ORDER_FLOWERS, DISTRIBUTION, SAVE_NAME, \
+    SAVE_PHONE, SAVE_ADDRESS, DELIVERY, SAVE_DATE = range(10)
+contact_details = []
 
 
 def start_command(update, context):
@@ -106,29 +108,52 @@ def order_processing(update, context):
             return True
         # return False
     update.message.reply_text('Введите Ваше Имя')
-    return CONTACT_DETAILS
+    return SAVE_NAME
 
 
 def save_name(update, context):
-    contact_details['name'] = update.message.text
-    update.message.reply_text('Отлично! Теперь введите свой телефон.')
-    return save_phone
+    name = update.message.text
+    contact_details.append(name)
+    update.message.reply_text('Отлично! Теперь введите свой номер телефона.')
+    return SAVE_PHONE
 
 
 def save_phone(update, context):
-    contact_details['phone'] = update.message.text
+    phone = update.message.text
+    contact_details.append(phone)
     update.message.reply_text('Спасибо! Адрес доставки?')
-    return save_address
+    return SAVE_ADDRESS
 
 
 def save_address(update, context):
-    contact_details['address'] = update.message.text
-    reply_keyboard = [['Ближайшие числа', 'Ввести самому']]
-    update.message.reply_text('На какую дату нужна доставка?',
-                              reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-                              )
+    address = update.message.text
+    contact_details.append(address)
+    today = datetime.date.today()
+    dates = [today + datetime.timedelta(days=i) for i in range(1, 7)]
+    buttons = [[date.strftime("%d.%m.%Y")] for date in dates]
+    buttons.append(['Срочная 24 часа'])
+    reply_markup = ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+    update.message.reply_text('Выберите дату:', reply_markup=reply_markup)
+    return SAVE_DATE
 
 
+def save_date(update, context):
+    date = update.message.text
+    contact_details.append(date)
+    if date != 'Срочная 24 часа':
+        keyboard = [
+            [KeyboardButton('11:00 - 15:00')],
+            [KeyboardButton('15:00 - 20:00')],
+        ]
+        reply_markup = ReplyKeyboardMarkup(keyboard)
+        update.message.reply_text('Спасибо! Время доставки?', reply_markup=reply_markup)
+        return DELIVERY
+    return DELIVERY
+def delivery_boy(update, context):
+    # Не успел дописать условие если человек выбрал срочная 24 часа
+    time = update.message.text
+    contact_details.append(time)
+    print(contact_details)
 def consultation(update, context):
     update.message.reply_text('Нажал консультация')
 
@@ -156,9 +181,12 @@ def main():
             DISTRIBUTION: [MessageHandler(Filters.regex('Заказать выбранный букет'), order_processing),
                            MessageHandler(Filters.regex('Консультация'), consultation),
                            MessageHandler(Filters.regex('Каталог'), catalog_bouquet)],
-            CONTACT_DETAILS: [MessageHandler(Filters.text & ~Filters.command, save_name),
-                              MessageHandler(Filters.text, save_phone),
-                              MessageHandler(Filters.text, save_address)]
+            SAVE_NAME:     [MessageHandler(Filters.text, save_name)],
+            SAVE_PHONE:    [MessageHandler(Filters.text, save_phone)],
+            SAVE_ADDRESS:  [MessageHandler(Filters.text, save_address)],
+            DELIVERY:      [MessageHandler(Filters.text, delivery_boy)],
+            SAVE_DATE:     [MessageHandler(Filters.text, save_date)],
+
 
 
         },
