@@ -249,7 +249,7 @@ class Order(models.Model):
         return f'{self.client}, {self.delivery_date} {self.delivery_time}{self.courier}'
     
 
-     def save_order(telegram_msg):
+    def save_order(telegram_msg):
         if len(telegram_msg['name'].split()) > 1:
             first_name = telegram_msg['name'].split()[0]
             last_name = telegram_msg['name'].split()[1]
