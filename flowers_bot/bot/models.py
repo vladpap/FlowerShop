@@ -2,6 +2,7 @@ from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 import phonenumbers
 from django.contrib.auth.models import User
+from PIL import Image, ImageOps, ImageDraw, ImageFont
 
 
 class Client(models.Model):
@@ -60,6 +61,14 @@ class Event(models.Model):
        
     def __str__(self):
         return f'{self.title}'
+    
+    
+    def get_event(id):
+        event = Event.objects.get(id=id)
+        event_title = f'{event.title}'
+
+        return event_title
+        
 
 
 class Catalog(models.Model):
@@ -89,7 +98,88 @@ class Catalog(models.Model):
 
 
     def __str__(self):
-        return f'{self.title},{self.price} р.'
+        return f'{self.title},{self.description},{self.composition},{self.price} р.'
+    
+
+    def make_images_3x3_grid(imgs, id_imgs, border=0):
+        cols = 3
+        rows = len(imgs) // 3
+        w, h = 900, 300 * rows
+        grid = Image.new('RGB',
+            size=(w + border * 2 ,  h + border * (rows - 1)),
+            color=(200,200,200))
+    
+        if sys.platform == 'linux':
+            font_name = 'arial.ttf'
+        else:
+            font_name = 'Helvetica'
+
+        for i, img in enumerate(imgs):
+            img_tmp = ImageOps.fit(img, size=(300, 300))
+            draw_img = ImageDraw.Draw(img_tmp)
+            draw_img.rectangle([0, 0, 60, 35], fill=(200,200,200))
+            draw_img.text(
+                        (10, 5),  # Coordinates
+                        str(id_imgs[i]),  # Text
+                        (0, 0, 0),  # Color
+                        font=ImageFont.truetype(font=font_name, size=30))
+
+            grid.paste(img_tmp,
+                box=(i%cols*300 + (i%cols*border), i//cols*300 + (i//cols*border)))
+
+        return grid
+
+
+    def make_catalog(imgs, id_imgs):
+        assert len(imgs) == len(id_imgs)
+
+        catalog = []
+    
+        imgs_divide = divide(imgs, 9)
+        id_imgs_divide = divide(id_imgs, 9)
+
+        for index, imgs_element in enumerate(imgs_divide):
+            catalog.append(
+                {'img' : make_images_3x3_grid(imgs_element,
+                                          id_imgs_divide[index],
+                                          border=20),
+                'id_imgs': id_imgs_divide[index]})
+
+        return catalog
+
+
+    def divide(lst: list, n: int):
+        divide_list = []
+        for i in range(0, len(lst), n):
+            divide_list.append(lst[i:i+n])
+
+        return divide_list
+
+
+    def get_catalog():
+        #catalog_base = Catalog.objects.all()
+        #for image in catalog_base:
+        #    images = image.photo
+        images = Catalog.objects.values('photo')
+        id_list = Catalog.objects.values('id')
+        catalog = make_catalog(images, id_list)
+
+        return catalog
+    
+
+    def get_bouquet(id):
+        bouquet = Catalog.objects.get(id=id)
+        image = bouquet.photo
+        description = f'<b>{bouquet.title}<b>\n' \
+            f'{bouquet.description}\n' \
+            f'{bouquet.composition}\n' \
+            f'Цена: {bouquet.price} руб.'
+        return {'image': image,
+                'text': description}
+    
+
+    #def get_custom_bouquet(event):
+
     
 
 class Consultation(models.Model):
@@ -157,3 +247,41 @@ class Order(models.Model):
 
     def __str__(self):
         return f'{self.client}, {self.delivery_date} {self.delivery_time}{self.courier}'
+    
+
+    def save_order(telegram_msg):
+        if len(telegram_msg['name'].split()) > 1:
+            first_name = telegram_msg['name'].split()[0]
+            last_name = telegram_msg['name'].split()[1]
+        else:
+            first_name = telegram_msg['name']
+            last_name = ''
+
+        client = Client.objects.filter(telegram_id=telegram_msg['telegram_id']).first()
+
+        if not client:
+            user = User.objects.create(
+                username=f'{first_name} {last_name}',
+                first_name=first_name,
+                last_name=last_name)
+
+            client = Client.objects.create(
+                user=user,
+                telegram_id=telegram_msg['telegram_id'],
+                phone=telegram_msg['phone'],
+                adress=telegram_msg['address'])
+            
+
+        order = Order.objects.create(
+            client=client,
+            adress=telegram_msg['adress'],
+            bouquet=telegram_msg['bouquet'],
+            delivery_date=telegram_msg['delivery_date'],
+            delivery_time=telegram_msg['delivery_time'])
+        
+
+
+
+            
+
+
