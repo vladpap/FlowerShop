@@ -64,10 +64,10 @@ class Event(models.Model):
     
     
     def get_event(id):
-        event = Event.objects.get(id=id)
-        event_title = f'{event.title}'
+        definite_event = Event.objects.get(id=id)
+        event = f'{definite_event.title}'
 
-        return event_title
+        return event
         
 
 
@@ -179,7 +179,15 @@ class Catalog(models.Model):
     
 
     #def get_custom_bouquet(event):
-
+        if chosen_price = #не важно
+            bouquets=Catalog.objects.filter(event=event, price__gte=3000)
+        elif chosen_price = #до 500
+            bouquets=Catalog.objects.filter(event=event, price__lte=500)
+        elif chosen_price = #до 100
+            bouquets=Catalog.objects.filter(event=event, price__gte=500, price__lte=1000)
+    
+        
+            
     
 
 class Consultation(models.Model):
@@ -237,7 +245,8 @@ class Order(models.Model):
     courier = models.ForeignKey(
         Client,
         on_delete=models.CASCADE,
-        null=False,
+        null=True,
+        blank= True,
         verbose_name='Курьер',
         related_name='courier_order_set')
 
@@ -278,6 +287,7 @@ class Order(models.Model):
             bouquet=telegram_msg['bouquet'],
             delivery_date=telegram_msg['delivery_date'],
             delivery_time=telegram_msg['delivery_time'])
+        
         
 
 
