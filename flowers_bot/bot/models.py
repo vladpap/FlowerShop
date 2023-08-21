@@ -160,8 +160,8 @@ class Catalog(models.Model):
         #catalog_base = Catalog.objects.all()
         #for image in catalog_base:
         #    images = image.photo
-        images = Catalog.objects.values('photo')
-        id_list = Catalog.objects.values('id')
+        images, id_list = Catalog.objects.values('photo', 'id')
+        # id_list = Catalog.objects.values('id')
         catalog = make_catalog(images, id_list)
 
         return catalog
