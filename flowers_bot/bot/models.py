@@ -179,12 +179,12 @@ class Catalog(models.Model):
     
 
     #def get_custom_bouquet(event):
-        if chosen_price = #не важно
-            bouquets=Catalog.objects.filter(event=event, price__gte=3000)
-        elif chosen_price = #до 500
-            bouquets=Catalog.objects.filter(event=event, price__lte=500)
-        elif chosen_price = #до 100
-            bouquets=Catalog.objects.filter(event=event, price__gte=500, price__lte=1000)
+    #    if chosen_price = #не важно
+    #        bouquets=Catalog.objects.filter(event=event, price__gte=3000)
+    #    elif chosen_price = #до 500
+    #        bouquets=Catalog.objects.filter(event=event, price__lte=500)
+    #    elif chosen_price = #до 100
+    #        bouquets=Catalog.objects.filter(event=event, price__gte=500, price__lte=1000)
     
         
             

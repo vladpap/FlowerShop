@@ -30,6 +30,10 @@ $ pip install -r requirements.txt
 ## Запуск
 
 ```console
+$ python3 manage.py migrate
+$ python3 manage.py createsuperuser
+$ python3 manage.py loaddata db_event.json
+$ python3 manage.py loaddata db_catalog.json
 $ python3 manage.py runserver
 ```
 
