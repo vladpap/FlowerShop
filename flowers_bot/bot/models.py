@@ -1,8 +1,64 @@
+import sys
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 import phonenumbers
 from django.contrib.auth.models import User
 from PIL import Image, ImageOps, ImageDraw, ImageFont
+
+
+def make_images_3x3_grid(imgs, id_imgs, border=0):
+    cols = 3
+    rows = len(imgs) // 3
+    w, h = 900, 300 * rows
+    grid = Image.new('RGB',
+        size=(w + border * 2 ,  h + border * (rows - 1)),
+        color=(200,200,200))
+
+    if sys.platform == 'linux':
+        font_name = '/usr/share/fonts/truetype/freefont/FreeSerif.ttf'
+    else:
+        font_name = 'Helvetica'
+
+    for i, img in enumerate(imgs):
+        img_tmp = ImageOps.fit(img, size=(300, 300))
+        draw_img = ImageDraw.Draw(img_tmp)
+        draw_img.rectangle([0, 0, 60, 35], fill=(200,200,200))
+        draw_img.text(
+                    (10, 5),  # Coordinates
+                    str(id_imgs[i]),  # Text
+                    (0, 0, 0),  # Color
+                    font=ImageFont.truetype(font=font_name, size=30))
+
+        grid.paste(img_tmp,
+            box=(i%cols*300 + (i%cols*border), i//cols*300 + (i//cols*border)))
+
+    return grid
+
+
+def divide(lst: list, n: int):
+    divide_list = []
+    for i in range(0, len(lst), n):
+        divide_list.append(lst[i:i+n])
+
+    return divide_list
+
+
+def make_catalog(imgs, id_imgs):
+    assert len(imgs) == len(id_imgs)
+
+    catalog = []
+
+    imgs_divide = divide(imgs, 9)
+    id_imgs_divide = divide(id_imgs, 9)
+
+    for index, imgs_element in enumerate(imgs_divide):
+        catalog.append(
+            {'img' : make_images_3x3_grid(imgs_element,
+                                      id_imgs_divide[index],
+                                      border=20),
+            'id_imgs': id_imgs_divide[index]})
+
+    return catalog
 
 
 class Client(models.Model):
@@ -101,74 +157,55 @@ class Catalog(models.Model):
         return f'{self.title},{self.description},{self.composition},{self.price} р.'
     
 
-    def make_images_3x3_grid(imgs, id_imgs, border=0):
-        cols = 3
-        rows = len(imgs) // 3
-        w, h = 900, 300 * rows
-        grid = Image.new('RGB',
-            size=(w + border * 2 ,  h + border * (rows - 1)),
-            color=(200,200,200))
-    
-        if sys.platform == 'linux':
-            font_name = 'arial.ttf'
-        else:
-            font_name = 'Helvetica'
-
-        for i, img in enumerate(imgs):
-            img_tmp = ImageOps.fit(img, size=(300, 300))
-            draw_img = ImageDraw.Draw(img_tmp)
-            draw_img.rectangle([0, 0, 60, 35], fill=(200,200,200))
-            draw_img.text(
-                        (10, 5),  # Coordinates
-                        str(id_imgs[i]),  # Text
-                        (0, 0, 0),  # Color
-                        font=ImageFont.truetype(font=font_name, size=30))
-
-            grid.paste(img_tmp,
-                box=(i%cols*300 + (i%cols*border), i//cols*300 + (i//cols*border)))
-
-        return grid
-
-
-    def make_catalog(imgs, id_imgs):
-        assert len(imgs) == len(id_imgs)
-
-        catalog = []
-    
-        imgs_divide = divide(imgs, 9)
-        id_imgs_divide = divide(id_imgs, 9)
-
-        for index, imgs_element in enumerate(imgs_divide):
-            catalog.append(
-                {'img' : make_images_3x3_grid(imgs_element,
-                                          id_imgs_divide[index],
-                                          border=20),
-                'id_imgs': id_imgs_divide[index]})
-
-        return catalog
-
-
-    def divide(lst: list, n: int):
-        divide_list = []
-        for i in range(0, len(lst), n):
-            divide_list.append(lst[i:i+n])
-
-        return divide_list
-
-
     def get_catalog():
-        #catalog_base = Catalog.objects.all()
-        #for image in catalog_base:
-        #    images = image.photo
-        images, id_list = Catalog.objects.values('photo', 'id')
-        # id_list = Catalog.objects.values('id')
+
+        img_id_query_set = Catalog.objects.values('photo', 'id')
+        
+        images, id_list = [], []
+        # id_list = Catalog.objects.values_list('id')
+        for item in img_id_query_set:
+            images.append(Image.open(item['photo']))
+            id_list.append(item['id'])
+        print(f'images:\n{images}')
         catalog = make_catalog(images, id_list)
 
+        print(catalog)
         return catalog
     
 
-    def get_bouquet(id):
-        bouquet = Catalog.objects.get(id=id)
+    def get_bouquet(id_event, price):
+
+        if price == 'Больше':
+            price_min = 2001
+            price_max = 100000
+        elif price == '2000':
+            price_min = 1001
+            price_max = 2000
+        elif price == '1000':
+            price_min = 501
+            price_max = 1000
+        elif price == '500':
+            price_min = 0
+            price_max = 500
+        else:
+            price_min = 0
+            price_max = 100000
+
+        print(f'min: {price_min},  max: {price_max}')
+
+        bouquet = Catalog.objects\
+            .filter(event__in=[id_event])\
+            .filter(price__gte=price_min)\
+            .filter(price__lte=price_max)\
+            .first()
+        if not bouquet:
+            print('Not event')
+            bouquets = Catalog.objects\
+            .filter(price__gte=price_min)\
+            .filter(price__lte=price_max)\
+            .first()
+
+        print(bouquet)
         image = bouquet.photo
         description = f'<b>{bouquet.title}<b>\n' \
             f'{bouquet.description}\n' \
@@ -178,17 +215,6 @@ class Catalog(models.Model):
                 'text': description}
     
 
-    #def get_custom_bouquet(event):
-    #    if chosen_price = #не важно
-    #        bouquets=Catalog.objects.filter(event=event, price__gte=3000)
-    #    elif chosen_price = #до 500
-    #        bouquets=Catalog.objects.filter(event=event, price__lte=500)
-    #    elif chosen_price = #до 100
-    #        bouquets=Catalog.objects.filter(event=event, price__gte=500, price__lte=1000)
-    
-        
-            
-    
 
 class Consultation(models.Model):
     client = models.ForeignKey(
@@ -287,11 +313,3 @@ class Order(models.Model):
             bouquet=telegram_msg['bouquet'],
             delivery_date=telegram_msg['delivery_date'],
             delivery_time=telegram_msg['delivery_time'])
-        
-        
-
-
-
-            
-
-
